@@ -257,7 +257,10 @@ export class XBrowser {
     if (this.identityProbe) return this.identityProbe;
     const probe = this.sessionGate.read(() => this.semaphore.use(async () => {
       const context = await this.connect();
-      const page = context.pages().find((candidate) => candidate.url().startsWith("https://x.com/")) ?? await context.newPage();
+      const pages = context.pages();
+      const page = pages.find((candidate) => candidate.url().startsWith("https://x.com/"))
+        ?? pages.find((candidate) => candidate.url() === "about:blank")
+        ?? await context.newPage();
       await page.bringToFront();
       await page.goto("https://x.com/home", { waitUntil: "domcontentloaded", timeout: 30_000 });
       await page.waitForTimeout(1_500);
@@ -283,7 +286,13 @@ export class XBrowser {
         this.sessionEpoch = randomEpoch();
         this.cache.clear();
       }
-      return this.status();
+      const result = this.status();
+      if (authenticated) {
+        await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 5_000 }).catch((error) => {
+          safeLog("browser_idle_park_failed", { error: error instanceof Error ? error.message : String(error) });
+        });
+      }
+      return result;
     }));
     this.identityProbe = probe;
     try {

@@ -76,23 +76,51 @@ describe("browser runtime hardening", () => {
     expect(evaluations).toBe(0);
   });
 
-  it("coalesces concurrent identity probes onto one X navigation", async () => {
+  it("coalesces concurrent identity probes and parks the authenticated tab", async () => {
     const browser = new XBrowser(testConfig("."), () => undefined);
-    let navigations = 0;
+    let currentUrl = "https://x.com/home";
+    const navigations: string[] = [];
     const page = {
       bringToFront: async () => undefined,
-      goto: async () => { navigations += 1; await Promise.resolve(); },
+      goto: async (url: string) => { navigations.push(url); currentUrl = url; await Promise.resolve(); },
       waitForTimeout: async () => undefined,
-      url: () => "https://x.com/home",
+      url: () => currentUrl,
       getByText: () => ({ first: () => ({ isVisible: async () => false }) }),
       locator: () => ({ first: () => ({ getAttribute: async () => "/fixture_account" }) }),
     };
     const internal = browser as unknown as { connect(): Promise<{ pages(): typeof page[]; newPage(): Promise<typeof page> }> };
     internal.connect = async () => ({ pages: () => [page], newPage: async () => page });
     const [one, two] = await Promise.all([browser.probeIdentity(true), browser.probeIdentity(true)]);
-    expect(navigations).toBe(1);
+    expect(navigations).toEqual(["https://x.com/home", "about:blank"]);
     expect(one.handle).toBe("fixture_account");
     expect(two).toEqual(one);
+  });
+
+  it("reuses the parked tab and leaves challenge recovery visible", async () => {
+    const browser = new XBrowser(testConfig("."), () => undefined);
+    let currentUrl = "about:blank";
+    const navigations: string[] = [];
+    let newPages = 0;
+    const page = {
+      bringToFront: async () => undefined,
+      goto: async (url: string) => { navigations.push(url); currentUrl = url; },
+      waitForTimeout: async () => undefined,
+      url: () => currentUrl,
+      getByText: () => ({ first: () => ({ isVisible: async () => true }) }),
+      locator: () => ({ first: () => ({ getAttribute: async () => null }) }),
+    };
+    const internal = browser as unknown as { connect(): Promise<{ pages(): typeof page[]; newPage(): Promise<typeof page> }> };
+    internal.connect = async () => ({
+      pages: () => [page],
+      newPage: async () => { newPages += 1; return page; },
+    });
+
+    const identity = await browser.probeIdentity(true);
+
+    expect(identity.authenticated).toBe(false);
+    expect(identity.challenge).toBe(true);
+    expect(navigations).toEqual(["https://x.com/home"]);
+    expect(newPages).toBe(0);
   });
 
   it("keeps sidecar supervision and health requirements explicit", () => {
