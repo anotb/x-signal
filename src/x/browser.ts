@@ -62,14 +62,29 @@ class Semaphore {
   constructor(private readonly limit: number) {}
 
   async use<T>(work: () => Promise<T>): Promise<T> {
-    if (this.active >= this.limit) await new Promise<void>((resolve) => this.waiters.push(resolve));
-    this.active += 1;
+    await this.acquire();
     try {
       return await work();
     } finally {
-      this.active -= 1;
-      this.waiters.shift()?.();
+      this.release();
     }
+  }
+
+  private async acquire(): Promise<void> {
+    if (this.active < this.limit) {
+      this.active += 1;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiters.push(resolve));
+  }
+
+  private release(): void {
+    const next = this.waiters.shift();
+    if (next) {
+      next();
+      return;
+    }
+    this.active -= 1;
   }
 }
 
@@ -136,11 +151,13 @@ const CACHE_MAX_ENTRIES = 32;
 export class XBrowser {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
+  private identityPage: Page | null = null;
   private identityProbe: Promise<BrowserIdentity> | null = null;
   private readonly semaphore: Semaphore;
   private readonly sessionGate = new ReadWriteGate();
   private readonly inFlight = new Map<string, Promise<unknown>>();
   private readonly cache = new Map<string, { expiresAt: number; value: unknown }>();
+  private readonly operationPages = new Set<Page>();
   private readonly activeRunPages = new Map<string, Set<Page>>();
   private lastImportedSessionDigest: string | null = null;
   private sessionEpoch = randomEpoch();
@@ -237,62 +254,171 @@ export class XBrowser {
       this.context = this.browser.contexts()[0] ?? null;
       if (!this.context) throw new Error("CDP browser did not expose its persistent context");
       this.identity = { ...this.identity, connected: true, remediation: null };
-      this.browser.on("disconnected", () => {
-        this.browser = null;
-        this.context = null;
-        this.identity = { ...this.identity, connected: false, remediation: "Restart or inspect the browser sidecar." };
-      });
+      const attachedBrowser = this.browser;
+      attachedBrowser.on("disconnected", () => this.handleBrowserDisconnect(attachedBrowser));
       safeLog("browser_attached", { endpoint: new URL(this.config.browserCdpUrl).origin });
       return this.context;
     } catch (error) {
       this.browser = null;
       this.context = null;
-      this.identity = { ...this.identity, connected: false, remediation: "Run `docker compose up -d browser` and inspect its health." };
+      this.identityPage = null;
+      this.operationPages.clear();
+      this.activeRunPages.clear();
+      this.identity = {
+        connected: false,
+        authenticated: null,
+        handle: null,
+        lastCheckedAt: null,
+        challenge: false,
+        remediation: "Run `docker compose up -d browser` and inspect its health.",
+      };
       throw toXSignalError(error);
     }
   }
 
-  async probeIdentity(force = false): Promise<BrowserIdentity> {
-    if (!force && this.identity.lastCheckedAt && Date.now() - Date.parse(this.identity.lastCheckedAt) < 5 * 60_000) return this.status();
-    if (this.identityProbe) return this.identityProbe;
-    const probe = this.sessionGate.read(() => this.semaphore.use(async () => {
-      const context = await this.connect();
-      const pages = context.pages();
-      const page = pages.find((candidate) => candidate.url().startsWith("https://x.com/"))
-        ?? pages.find((candidate) => candidate.url() === "about:blank")
-        ?? await context.newPage();
-      await page.bringToFront();
-      await page.goto("https://x.com/home", { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForTimeout(1_500);
-      const url = page.url();
-      const challenge = /\/account\/access|\/i\/flow\/login|challenge/i.test(url)
-        || await page.getByText(/verify your identity|unusual activity|authenticate your account/i).first().isVisible().catch(() => false);
-      const href = await page.locator('a[data-testid="AppTabBar_Profile_Link"]').first().getAttribute("href").catch(() => null);
-      const handle = href && /^\/[A-Za-z0-9_]+$/.test(href) ? href.slice(1) : null;
-      const authenticated = handle !== null;
-      const previousHandle = this.identity.handle;
-      const identityWasPreviouslyChecked = this.identity.lastCheckedAt !== null;
+  private handleBrowserDisconnect(source: Browser): void {
+    if (this.browser !== source) return;
+    this.browser = null;
+    this.context = null;
+    this.identityPage = null;
+    this.operationPages.clear();
+    this.activeRunPages.clear();
+    this.identity = {
+      connected: false,
+      authenticated: null,
+      handle: null,
+      lastCheckedAt: null,
+      challenge: false,
+      remediation: "Restart or inspect the browser sidecar.",
+    };
+  }
+
+  private async getIdentityPage(context: BrowserContext): Promise<Page> {
+    if (this.identityPage && !this.identityPage.isClosed()) return this.identityPage;
+    this.identityPage = null;
+    const page = context.pages().find((candidate) => candidate.url() === "about:blank" && !this.operationPages.has(candidate))
+      ?? await context.newPage();
+    this.bindIdentityPage(page);
+    return page;
+  }
+
+  private bindIdentityPage(page: Page): void {
+    if (this.identityPage === page) return;
+    this.identityPage = page;
+    page.once("close", () => {
+      if (this.identityPage === page) this.identityPage = null;
+    });
+  }
+
+  private async parkIdentityPage(page: Page): Promise<void> {
+    try {
+      await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 5_000 });
+      if (page.url() !== "about:blank") throw new Error(`Identity page remained at ${new URL(page.url()).origin}.`);
+      if (!this.browser?.isConnected() || !this.context) throw new Error("Browser disconnected while parking the identity page.");
+    } catch (error) {
+      safeLog("browser_idle_park_failed", { error: error instanceof Error ? error.message : String(error) });
+      await this.discardIdentityPage(page);
       this.identity = {
-        connected: true,
-        authenticated,
-        handle,
-        lastCheckedAt: new Date().toISOString(),
-        challenge,
-        remediation: authenticated ? null : challenge
-          ? "Resolve the visible X account challenge through noVNC; X Signal does not bypass challenges."
-          : "Open noVNC at http://127.0.0.1:6080/vnc.html and sign into X in the persistent browser.",
+        ...this.identity,
+        authenticated: null,
+        handle: null,
+        lastCheckedAt: null,
+        challenge: false,
+        remediation: "Inspect the browser sidecar logs and retry the identity check.",
       };
-      if (identityWasPreviouslyChecked && (previousHandle ?? "").toLowerCase() !== (handle ?? "").toLowerCase()) {
-        this.sessionEpoch = randomEpoch();
-        this.cache.clear();
+      throw new XSignalError("CAPABILITY_UNAVAILABLE", "X Signal authenticated the browser but could not return it to a low-CPU idle state.", {
+        remediation: "Inspect the browser sidecar logs and retry the identity check.",
+        cause: error,
+      });
+    }
+  }
+
+  private async adoptRecoveryPage(page: Page, navigateHome: boolean): Promise<void> {
+    let recoveryPage = page;
+    if (recoveryPage.isClosed()) {
+      try {
+        const context = this.context ?? await this.connect();
+        recoveryPage = await context.newPage();
+      } catch (error) {
+        safeLog("browser_recovery_page_failed", { error: error instanceof Error ? error.message : String(error) });
+        return;
       }
-      const result = this.status();
-      if (authenticated) {
-        await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 5_000 }).catch((error) => {
-          safeLog("browser_idle_park_failed", { error: error instanceof Error ? error.message : String(error) });
-        });
+    }
+    const previous = this.identityPage;
+    this.operationPages.delete(recoveryPage);
+    this.bindIdentityPage(recoveryPage);
+    if (previous && previous !== recoveryPage && !previous.isClosed()) await previous.close().catch(() => undefined);
+    if (navigateHome && !isInteractiveRecoveryUrl(recoveryPage.url())) {
+      await recoveryPage.goto("https://x.com/home", { waitUntil: "domcontentloaded", timeout: 30_000 }).catch((error) => {
+        safeLog("browser_recovery_navigation_failed", { error: error instanceof Error ? error.message : String(error) });
+      });
+    }
+    await recoveryPage.bringToFront().catch(() => undefined);
+  }
+
+  private async discardIdentityPage(page: Page): Promise<void> {
+    if (this.identityPage === page) this.identityPage = null;
+    if (!page.isClosed()) await page.close().catch(() => undefined);
+  }
+
+  async probeIdentity(force = false): Promise<BrowserIdentity> {
+    if (!force
+      && this.identity.connected
+      && this.browser?.isConnected()
+      && this.context
+      && this.identity.lastCheckedAt
+      && Date.now() - Date.parse(this.identity.lastCheckedAt) < 5 * 60_000) return this.status();
+    if (this.identityProbe) return this.identityProbe;
+    const probe = this.sessionGate.write(() => this.semaphore.use(async () => {
+      const context = await this.connect();
+      const page = await this.getIdentityPage(context);
+      try {
+        await page.goto("https://x.com/home", { waitUntil: "domcontentloaded", timeout: 30_000 });
+        await page.waitForTimeout(1_500);
+        const url = page.url();
+        const challenge = isInteractiveRecoveryUrl(url)
+          || await page.getByText(/verify your identity|unusual activity|authenticate your account/i).first().isVisible().catch(() => false);
+        const href = await page.locator('a[data-testid="AppTabBar_Profile_Link"]').first().getAttribute("href").catch(() => null);
+        const handle = href && /^\/[A-Za-z0-9_]+$/.test(href) ? href.slice(1) : null;
+        const authenticated = handle !== null && !challenge;
+        const previousHandle = this.identity.handle;
+        const identityWasPreviouslyChecked = this.identity.lastCheckedAt !== null;
+        this.identity = {
+          connected: true,
+          authenticated,
+          handle,
+          lastCheckedAt: new Date().toISOString(),
+          challenge,
+          remediation: challenge
+            ? "Resolve the visible X account challenge through noVNC; X Signal does not bypass challenges."
+            : authenticated
+              ? null
+              : "Open noVNC at http://127.0.0.1:6080/vnc.html and sign into X in the persistent browser.",
+        };
+        if (identityWasPreviouslyChecked && (previousHandle ?? "").toLowerCase() !== (handle ?? "").toLowerCase()) {
+          this.sessionEpoch = randomEpoch();
+          this.cache.clear();
+        }
+        if (!authenticated) {
+          await page.bringToFront().catch(() => undefined);
+          return this.status();
+        }
+        await this.parkIdentityPage(page);
+        return this.status();
+      } catch (error) {
+        let failure = toXSignalError(error);
+        try {
+          this.assertReadablePage(page);
+        } catch (readabilityError) {
+          failure = toXSignalError(readabilityError);
+        }
+        if (isRecoveryError(failure)) {
+          await this.adoptRecoveryPage(page, failure.code === "REAUTH_REQUIRED" && !isInteractiveRecoveryUrl(page.url()));
+        } else {
+          await this.discardIdentityPage(page);
+        }
+        throw failure;
       }
-      return result;
     }));
     this.identityProbe = probe;
     try {
@@ -559,6 +685,8 @@ export class XBrowser {
       if (options.shouldContinue && !options.shouldContinue()) throw new XSignalError("CANCELLED", "The run was cancelled before browser navigation.");
       const context = await this.connect();
       const page = await context.newPage();
+      this.operationPages.add(page);
+      let preservePage = false;
       if (options.runId) {
         const pages = this.activeRunPages.get(options.runId) ?? new Set<Page>();
         pages.add(page);
@@ -635,15 +763,25 @@ export class XBrowser {
         safeLog("x_operation_succeeded", { operation: meta.name, lens: meta.lens, count: items.length, replayed: meta.replayed, attempts, skipped: skipCount + skipIds.size });
         return { items, nextCursor: cursor, warnings, operation: meta };
       } catch (error) {
-        this.assertReadablePage(page);
-        throw toXSignalError(error);
+        let failure = toXSignalError(error);
+        try {
+          this.assertReadablePage(page);
+        } catch (readabilityError) {
+          failure = toXSignalError(readabilityError);
+        }
+        if (isRecoveryError(failure)) {
+          await this.adoptRecoveryPage(page, failure.code === "REAUTH_REQUIRED" && !isInteractiveRecoveryUrl(page.url()));
+          preservePage = true;
+        }
+        throw failure;
       } finally {
+        this.operationPages.delete(page);
         if (options.runId) {
           const pages = this.activeRunPages.get(options.runId);
           pages?.delete(page);
           if (pages?.size === 0) this.activeRunPages.delete(options.runId);
         }
-        await page.close().catch(() => undefined);
+        if (!preservePage && this.identityPage !== page) await page.close().catch(() => undefined);
       }
     }));
   }
@@ -651,8 +789,19 @@ export class XBrowser {
   private assertReadablePage(page: Page): void {
     const url = page.url();
     if (/\/i\/flow\/login|\/account\/access/i.test(url)) {
-      this.identity = { ...this.identity, connected: true, authenticated: false, challenge: /account\/access/i.test(url), lastCheckedAt: new Date().toISOString(), remediation: "Complete X sign-in or the visible challenge through noVNC." };
-      throw new XSignalError(/account\/access/i.test(url) ? "UPSTREAM_CHALLENGE" : "NOT_AUTHENTICATED", "The persistent X browser requires interactive sign-in.");
+      const challenge = /\/account\/access/i.test(url);
+      this.identity = {
+        ...this.identity,
+        connected: true,
+        authenticated: false,
+        handle: null,
+        challenge,
+        lastCheckedAt: new Date().toISOString(),
+        remediation: challenge
+          ? "Resolve the visible X account challenge through noVNC; X Signal does not bypass challenges."
+          : "Complete X sign-in through noVNC.",
+      };
+      throw new XSignalError(challenge ? "UPSTREAM_CHALLENGE" : "NOT_AUTHENTICATED", "The persistent X browser requires interactive sign-in.");
     }
   }
 
@@ -662,6 +811,13 @@ export class XBrowser {
     const href = await profileLink.getAttribute("href").catch(() => null);
     const observed = href && /^\/[A-Za-z0-9_]+$/.test(href) ? href.slice(1).toLowerCase() : null;
     if (!observed) {
+      this.identity = {
+        ...this.identity,
+        authenticated: null,
+        handle: null,
+        lastCheckedAt: new Date().toISOString(),
+        remediation: "Open the persistent browser, confirm the intended account, then retry.",
+      };
       throw new XSignalError("REAUTH_REQUIRED", `X Signal could not verify which signed-in account produced this response; the operation was discarded instead of attributing it to @${expected}.`, {
         remediation: "Open the persistent browser, confirm X home loads normally, then retry. If the account changed, sync or activate the intended Chrome profile first.",
       });
@@ -681,7 +837,17 @@ export class XBrowser {
   }
 
   private assertHttpStatus(status: number, retryAfter: string | undefined, label: string): void {
-    if (status === 401 || status === 403) throw new XSignalError("REAUTH_REQUIRED", `${label} returned HTTP ${status}.`);
+    if (status === 401 || status === 403) {
+      this.identity = {
+        ...this.identity,
+        authenticated: false,
+        handle: null,
+        challenge: false,
+        lastCheckedAt: new Date().toISOString(),
+        remediation: "Open the persistent browser and complete sign-in or account recovery, then retry.",
+      };
+      throw new XSignalError("REAUTH_REQUIRED", `${label} returned HTTP ${status}.`);
+    }
     if (status === 429) {
       this.consecutiveRateLimits += 1;
       const exponentialFloor = Math.min(15 * 60_000, 30_000 * (2 ** Math.min(this.consecutiveRateLimits - 1, 5)));
@@ -744,6 +910,14 @@ export class XBrowser {
       this.consecutiveRateLimits = 0;
     }
   }
+}
+
+function isInteractiveRecoveryUrl(url: string): boolean {
+  return /\/i\/flow\/login|\/account\/access|challenge/i.test(url);
+}
+
+function isRecoveryError(error: XSignalError): boolean {
+  return error.code === "NOT_AUTHENTICATED" || error.code === "REAUTH_REQUIRED" || error.code === "UPSTREAM_CHALLENGE";
 }
 
 export function parseRetryAfterMs(value: string | undefined, now = Date.now()): number {
