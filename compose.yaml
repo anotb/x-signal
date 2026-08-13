@@ -1,0 +1,102 @@
+name: x-signal
+
+services:
+  browser:
+    build:
+      context: .
+      dockerfile: deploy/browser/Dockerfile
+    image: x-signal-browser:0.1.0-rc.5
+    restart: unless-stopped
+    environment:
+      DISPLAY: ":99"
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      XSIGNAL_VNC_PASSWORD: "${XSIGNAL_VNC_PASSWORD:-}"
+    ports:
+      - "127.0.0.1:6080:6080"
+      - "127.0.0.1:9223:9223"
+    volumes:
+      - xsignal_browser:/data
+    shm_size: "1gb"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:9222/json/version >/dev/null && curl --fail --silent http://127.0.0.1:6080/vnc.html >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
+    networks: [xsignal]
+
+  x-signal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: x-signal:0.1.0-rc.5
+    init: true
+    restart: unless-stopped
+    depends_on:
+      browser:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      XSIGNAL_PORT: "7345"
+      XSIGNAL_BROWSER_CDP_URL: "${XSIGNAL_BROWSER_CDP_URL:-http://browser:9223}"
+      XSIGNAL_DATA_DIR: /data
+      XSIGNAL_LOG_LEVEL: "${XSIGNAL_LOG_LEVEL:-info}"
+      XSIGNAL_MAX_BROWSER_CONCURRENCY: "${XSIGNAL_MAX_BROWSER_CONCURRENCY:-2}"
+      XSIGNAL_REQUEST_SPACING_MS: "${XSIGNAL_REQUEST_SPACING_MS:-900}"
+      XSIGNAL_MCP_BEARER_TOKEN: "${XSIGNAL_MCP_BEARER_TOKEN:-}"
+      XSIGNAL_ALLOW_PRIVATE_MONITOR_SINKS: "${XSIGNAL_ALLOW_PRIVATE_MONITOR_SINKS:-0}"
+    ports:
+      - "127.0.0.1:${XSIGNAL_PORT:-7345}:7345"
+    volumes:
+      - xsignal_data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7345/healthz').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks: [xsignal]
+
+  openai-tunnel:
+    profiles: ["chatgpt"]
+    image: ghcr.io/openai/tunnel-client:v0.0.11@sha256:a5b0b220577cdaeeb60a76d59700d03fb83ea8580c9c7871798ecadd09b4b71b
+    restart: unless-stopped
+    depends_on:
+      x-signal:
+        condition: service_healthy
+    environment:
+      CONTROL_PLANE_TUNNEL_ID: "${OPENAI_TUNNEL_ID:-not-configured}"
+      MCP_SERVER_URL: "http://x-signal:7345/mcp"
+      HEALTH_LISTEN_ADDR: ":8080"
+      # Docker bridge requests are not loopback inside the container. The host
+      # binding below still limits this admin/readiness surface to this machine.
+      ALLOW_REMOTE_UI: "true"
+      LOG_FORMAT: json
+      LOG_LEVEL: info
+    command: ["--control-plane.api-key=file:/run/secrets/openai-tunnel-api-key"]
+    secrets:
+      - source: openai_tunnel_api_key
+        target: openai-tunnel-api-key
+    ports:
+      - "127.0.0.1:7346:8080"
+    healthcheck:
+      test: ["CMD", "/usr/bin/tunnel-client", "health", "--port", "8080", "--require-control-plane-poll"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+    networks: [xsignal]
+
+networks:
+  xsignal:
+    driver: bridge
+
+volumes:
+  xsignal_data:
+    name: xsignal_data
+  xsignal_browser:
+    name: xsignal_browser
+
+secrets:
+  openai_tunnel_api_key:
+    file: ./.secrets/openai-tunnel-api-key

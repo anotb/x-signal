@@ -1,0 +1,4 @@
+interface:
+  display_name: "X Signal Setup"
+  short_description: "Set up and diagnose the local X Signal stack"
+  default_prompt: "Use $x-setup to configure or diagnose the local Docker browser, MCP service, and ChatGPT connection."

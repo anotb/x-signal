@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; font: 14px/1.4 system-ui, sans-serif; }
+body { margin: 0; min-width: 280px; }
+main { padding: 16px; }
+h1 { font-size: 18px; margin: 0 0 10px; }
+p { margin: 8px 0; }
+#detail { color: #707070; font-size: 12px; }
+.hint { border-left: 3px solid #1d9bf0; color: #555; font-size: 12px; padding-left: 8px; }
+label { display: block; font-size: 12px; margin-top: 12px; }
+input { box-sizing: border-box; margin: 4px 0 10px; padding: 7px; width: 100%; }
+.toggle { align-items: center; display: flex; gap: 7px; margin: 0 0 12px; }
+.toggle input { margin: 0; width: auto; }
+.actions { display: flex; gap: 8px; }
+button { border: 0; border-radius: 8px; cursor: pointer; font: inherit; padding: 8px 12px; }

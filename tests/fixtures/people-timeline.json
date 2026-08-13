@@ -1,0 +1,52 @@
+{
+  "data": {
+    "search_by_raw_query": {
+      "search_timeline": {
+        "timeline": {
+          "instructions": [
+            {
+              "type": "TimelineAddEntries",
+              "entries": [
+                {
+                  "entryId": "user-3000000000000000001",
+                  "content": {
+                    "entryType": "TimelineTimelineItem",
+                    "itemContent": {
+                      "itemType": "TimelineUser",
+                      "user_results": {
+                        "result": {
+                          "__typename": "User",
+                          "rest_id": "3000000000000000001",
+                          "is_blue_verified": true,
+                          "possibly_sensitive": false,
+                          "core": {
+                            "created_at": "Thu Jan 02 03:04:05 +0000 2020",
+                            "name": "Example Research Lab",
+                            "screen_name": "example_lab"
+                          },
+                          "avatar": { "image_url": "https://example.invalid/avatar.jpg" },
+                          "banner": { "image_url": "https://example.invalid/banner.jpg" },
+                          "location": { "location": "Example City" },
+                          "profile_bio": { "description": "Synthetic parser fixture account.", "entities": [] },
+                          "relationship_counts": { "followers": 1234, "following": 42 },
+                          "tweet_counts": { "tweets": 321, "media_tweets": 12 },
+                          "verification": { "verified": true, "verified_type": "Business" },
+                          "website": { "url": "https://example.org/" },
+                          "privacy": { "protected": false }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "entryId": "cursor-bottom-0",
+                  "content": { "cursorType": "Bottom", "value": "PEOPLE_CURSOR" }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

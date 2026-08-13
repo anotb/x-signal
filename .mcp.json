@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "x-signal": {
+      "type": "http",
+      "url": "http://127.0.0.1:7345/mcp",
+      "note": "Local X Signal MCP service. Start the Compose stack before use; no OpenAI API key is required."
+    }
+  }
+}

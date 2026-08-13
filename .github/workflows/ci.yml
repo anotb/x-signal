@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+
+  packaging:
+    name: Packaging and dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=low
+      - run: docker compose config --quiet
+      - run: bash -n deploy/browser/entrypoint.sh
+      - run: node --check deploy/browser/launcher.mjs
+      - name: Check Node scripts
+        run: find scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check

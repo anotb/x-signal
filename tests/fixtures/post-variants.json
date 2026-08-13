@@ -1,0 +1,47 @@
+{
+  "data": { "search_by_raw_query": { "search_timeline": { "timeline": { "instructions": [
+    { "type": "TimelinePinEntry", "entry": { "entryId": "tweet-101", "content": { "itemContent": { "tweet_results": { "result": {
+      "__typename": "Tweet", "rest_id": "101", "core": { "user_results": { "result": { "rest_id": "u1", "core": { "screen_name": "writer", "name": "Writer" } } } },
+      "legacy": { "full_text": "article wrapper", "created_at": "Wed Aug 12 09:00:00 +0000 2026", "conversation_id_str": "101", "reply_count": 1, "retweet_count": 2, "quote_count": 3, "favorite_count": 4 },
+      "article": { "article_results": { "result": { "title": "Article title", "content_state": { "blocks": [{ "text": "First paragraph." }, { "text": "Second paragraph." }] } } } }
+    } } } } } },
+    { "type": "TimelineAddEntries", "entries": [
+      { "entryId": "tweet-102", "content": { "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "102", "core": { "user_results": { "result": { "rest_id": "u2", "core": { "screen_name": "replyer", "name": "Replyer" } } } },
+        "legacy": { "full_text": "a reply", "created_at": "Wed Aug 12 09:01:00 +0000 2026", "conversation_id_str": "101", "in_reply_to_status_id_str": "101", "reply_count": 0, "retweet_count": 0, "quote_count": 0, "favorite_count": 1 }
+      } } } } },
+      { "entryId": "tweet-103", "content": { "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "103", "core": { "user_results": { "result": { "rest_id": "u3", "core": { "screen_name": "reposter", "name": "Reposter" } } } },
+        "legacy": { "full_text": "RT original", "created_at": "Wed Aug 12 09:02:00 +0000 2026", "conversation_id_str": "103", "reply_count": 0, "retweet_count": 1, "quote_count": 0, "favorite_count": 0,
+          "retweeted_status_result": { "result": { "__typename": "Tweet", "rest_id": "90", "core": { "user_results": { "result": { "rest_id": "u9", "core": { "screen_name": "original", "name": "Original" } } } }, "legacy": { "full_text": "original work", "created_at": "Wed Aug 12 08:00:00 +0000 2026", "conversation_id_str": "90", "reply_count": 1, "retweet_count": 2, "quote_count": 0, "favorite_count": 3 } } }
+        }
+      } } } } },
+      { "entryId": "tweet-104", "content": { "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "104", "core": { "user_results": { "result": { "rest_id": "u4", "core": { "screen_name": "quoter", "name": "Quoter" } } } },
+        "legacy": { "full_text": "counterpoint", "created_at": "Wed Aug 12 09:03:00 +0000 2026", "conversation_id_str": "104", "is_quote_status": true, "reply_count": 0, "retweet_count": 0, "quote_count": 1, "favorite_count": 2 },
+        "quoted_status_result": { "result": { "__typename": "Tweet", "rest_id": "91", "core": { "user_results": { "result": { "rest_id": "u9", "core": { "screen_name": "original", "name": "Original" } } } }, "legacy": { "full_text": "claim", "created_at": "Wed Aug 12 08:00:00 +0000 2026", "conversation_id_str": "91", "reply_count": 1, "retweet_count": 2, "quote_count": 0, "favorite_count": 3 } } }
+      } } } } },
+      { "entryId": "promoted-105", "content": { "promotedMetadata": { "advertiser": "brand" }, "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "105", "core": { "user_results": { "result": { "rest_id": "u5", "core": { "screen_name": "brand", "name": "Brand" } } } },
+        "legacy": { "full_text": "promoted", "created_at": "Wed Aug 12 09:04:00 +0000 2026", "conversation_id_str": "105", "reply_count": 0, "retweet_count": 0, "quote_count": 0, "favorite_count": 0 }
+      } } } } },
+      { "entryId": "tweet-106", "content": { "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "106", "core": { "user_results": { "result": { "rest_id": "u6", "core": { "screen_name": "noter", "name": "Noter" } } } },
+        "legacy": { "full_text": "truncated", "created_at": "Wed Aug 12 09:05:00 +0000 2026", "conversation_id_str": "106", "reply_count": 0, "retweet_count": 0, "quote_count": 0, "favorite_count": 1 },
+        "note_tweet": { "note_tweet_results": { "result": { "text": "full long-form note" } } }
+      } } } } },
+      { "entryId": "tweet-107", "content": { "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "107", "core": { "user_results": { "result": { "rest_id": "u7", "core": { "screen_name": "media", "name": "Media" } } } },
+        "legacy": { "full_text": "media post", "created_at": "Wed Aug 12 09:06:00 +0000 2026", "conversation_id_str": "107", "reply_count": 0, "retweet_count": 0, "quote_count": 0, "favorite_count": 1, "extended_entities": { "media": [
+          { "type": "photo", "media_url_https": "https://media.example.invalid/photo.jpg", "ext_alt_text": "photo alt" },
+          { "type": "animated_gif", "media_url_https": "https://media.example.invalid/gif.jpg", "video_info": { "variants": [{ "content_type": "video/mp4", "url": "https://media.example.invalid/gif.mp4" }] } },
+          { "type": "video", "media_url_https": "https://media.example.invalid/video.jpg", "video_info": { "variants": [{ "content_type": "video/mp4", "bitrate": 256000, "url": "https://media.example.invalid/low.mp4" }, { "content_type": "video/mp4", "bitrate": 832000, "url": "https://media.example.invalid/high.mp4" }] } }
+        ] } }
+      } } } } },
+      { "entryId": "tweet-108", "content": { "itemContent": { "tweet_results": { "result": {
+        "__typename": "Tweet", "rest_id": "108", "core": { "user_results": { "result": { "rest_id": "u8", "core": { "screen_name": "linker", "name": "Linker" } } } },
+        "legacy": { "full_text": "article link", "created_at": "Wed Aug 12 09:07:00 +0000 2026", "conversation_id_str": "108", "reply_count": 0, "retweet_count": 0, "quote_count": 0, "favorite_count": 1, "entities": { "urls": [{ "expanded_url": "https://x.com/i/article/123" }] } }
+      } } } } },
+      { "entryId": "cursor-bottom", "content": { "cursorType": "Bottom", "value": "bottom-cursor" } }
+    ] }
+  ] } } } } }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "X Feed and Thread"
+  short_description: "Analyze X feeds, posts, threads, and replies"
+  default_prompt: "Use $x-feed-and-thread to inspect the requested feed or post and separate thread, reply, and quote evidence."

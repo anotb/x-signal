@@ -1,0 +1,4 @@
+interface:
+  display_name: "X Monitoring"
+  short_description: "Create and review persistent X signal monitors"
+  default_prompt: "Use $x-monitoring to create or review a persistent X monitor and explain the latest diff."

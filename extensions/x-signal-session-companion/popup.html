@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>X Signal session</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>X Signal</h1>
+      <p id="status">Checking local session…</p>
+      <p id="detail"></p>
+      <label for="profile-label">This Chrome profile</label>
+      <input id="profile-label" maxlength="80" type="text">
+      <label class="toggle"><input id="auto-sync" type="checkbox"> Keep this profile synced automatically</label>
+      <p class="hint">For a lasting alternate X account, use a dedicated Chrome profile, leave automatic sync on, and select it once below.</p>
+      <div class="actions">
+        <button id="sync" type="button">Sync now</button>
+        <button id="activate" type="button">Use this profile</button>
+      </div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "X Research"
+  short_description: "Research and synthesize broad live X evidence"
+  default_prompt: "Use $x-research to investigate this topic broadly across relevant X evidence, then synthesize the findings, using direct references when they improve traceability."

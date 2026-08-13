@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "X Signal Session Companion",
+  "version": "0.2.0",
+  "description": "Keeps the local X Signal browser aligned with this Chrome profile's signed-in X session.",
+  "permissions": ["alarms", "cookies", "storage"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://*.x.com/*",
+    "https://twitter.com/*",
+    "https://*.twitter.com/*",
+    "http://127.0.0.1:7345/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "X Signal session status",
+    "default_popup": "popup.html"
+  }
+}

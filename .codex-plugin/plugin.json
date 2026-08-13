@@ -1,0 +1,25 @@
+{
+  "name": "x-signal",
+  "version": "0.1.0-rc.5",
+  "description": "Read-only X (Twitter) research for ChatGPT and Codex through a signed-in local browser.",
+  "author": {
+    "name": "X Signal contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "X Signal",
+    "shortDescription": "Research X from ChatGPT or Codex.",
+    "longDescription": "Search X, read feeds and threads, find accounts, monitor topics, and export evidence through a local signed-in browser.",
+    "developerName": "X Signal contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "MCP tools",
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use X Signal to research what is happening on X and synthesize the evidence, using direct references when they improve the answer.",
+      "Use X Signal to compare discussion of these topics across Top, Latest, and relevant accounts."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

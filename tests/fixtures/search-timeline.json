@@ -1,0 +1,159 @@
+{
+  "data": {
+    "search_by_raw_query": {
+      "search_timeline": {
+        "timeline": {
+          "instructions": [
+            {
+              "type": "TimelineAddEntries",
+              "entries": [
+                {
+                  "entryId": "tweet-1000000000000000001",
+                  "content": {
+                    "itemContent": {
+                      "tweet_results": {
+                        "result": {
+                          "__typename": "Tweet",
+                          "rest_id": "1000000000000000001",
+                          "core": {
+                            "user_results": {
+                              "result": {
+                                "rest_id": "2000000000000000001",
+                                "core": { "screen_name": "fixture_author", "name": "Fixture Author" },
+                                "avatar": { "image_url": "https://media.example.invalid/fixture-avatar.jpg" },
+                                "relationship_counts": { "followers": 1234 },
+                                "is_blue_verified": true
+                              }
+                            }
+                          },
+                          "legacy": {
+                            "bookmark_count": 3,
+                            "conversation_id_str": "1000000000000000001",
+                            "created_at": "Tue Aug 12 12:00:00 +0000 2026",
+                            "favorite_count": 42,
+                            "full_text": "Short fixture text https://example.org/evidence",
+                            "is_quote_status": true,
+                            "quote_count": 2,
+                            "reply_count": 4,
+                            "retweet_count": 8,
+                            "in_reply_to_status_id_str": null,
+                            "extended_entities": {
+                              "media": [
+                                {
+                                  "type": "photo",
+                                  "media_url_https": "https://media.example.invalid/fixture.jpg",
+                                  "ext_alt_text": "Synthetic diagram"
+                                }
+                              ]
+                            },
+                            "entities": {
+                              "urls": [
+                                { "expanded_url": "https://example.org/evidence" }
+                              ]
+                            }
+                          },
+                          "note_tweet": {
+                            "note_tweet_results": {
+                              "result": { "text": "Long-form fixture note with more useful evidence." }
+                            }
+                          },
+                          "views": { "count": "1200" },
+                          "quoted_status_result": {
+                            "result": {
+                              "__typename": "Tweet",
+                              "rest_id": "1000000000000000999",
+                              "core": {
+                                "user_results": {
+                                  "result": {
+                                    "rest_id": "2000000000000000999",
+                                    "legacy": {
+                                      "screen_name": "quoted_fixture",
+                                      "name": "Quoted Fixture",
+                                      "profile_image_url_https": "https://media.example.invalid/quoted-avatar.jpg",
+                                      "verified": false,
+                                      "followers_count": 20
+                                    }
+                                  }
+                                }
+                              },
+                              "legacy": {
+                                "conversation_id_str": "1000000000000000999",
+                                "created_at": "Tue Aug 12 11:00:00 +0000 2026",
+                                "favorite_count": 2,
+                                "full_text": "Quoted context",
+                                "is_quote_status": false,
+                                "quote_count": 0,
+                                "reply_count": 0,
+                                "retweet_count": 0,
+                                "entities": {}
+                              },
+                              "views": { "count": "30" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "entryId": "search-conversation-1000000000000000002",
+                  "content": {
+                    "items": [
+                      {
+                        "item": {
+                          "itemContent": {
+                            "tweet_results": {
+                              "result": {
+                                "__typename": "Tweet",
+                                "rest_id": "1000000000000000002",
+                                "core": {
+                                  "user_results": {
+                                    "result": {
+                                      "rest_id": "2000000000000000002",
+                                      "legacy": {
+                                        "screen_name": "reply_fixture",
+                                        "name": "Reply Fixture",
+                                        "profile_image_url_https": "https://media.example.invalid/reply-avatar.jpg",
+                                        "verified": false,
+                                        "followers_count": 55
+                                      }
+                                    }
+                                  }
+                                },
+                                "legacy": {
+                                  "conversation_id_str": "1000000000000000001",
+                                  "created_at": "Tue Aug 12 12:05:00 +0000 2026",
+                                  "favorite_count": 5,
+                                  "full_text": "Evidence-adding fixture reply",
+                                  "is_quote_status": false,
+                                  "quote_count": 0,
+                                  "reply_count": 1,
+                                  "retweet_count": 0,
+                                  "in_reply_to_status_id_str": "1000000000000000001",
+                                  "entities": {}
+                                },
+                                "views": { "count": "100" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "entryId": "cursor-bottom-0",
+                  "content": { "cursorType": "Bottom", "value": "DAABCURSOR" }
+                },
+                {
+                  "entryId": "cursor-top-0",
+                  "content": { "cursorType": "Top", "value": "TOPCURSOR" }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

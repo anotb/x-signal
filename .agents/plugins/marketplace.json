@@ -1,0 +1,20 @@
+{
+  "name": "x-signal-local",
+  "interface": {
+    "displayName": "X Signal Local"
+  },
+  "plugins": [
+    {
+      "name": "x-signal",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

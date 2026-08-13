@@ -1,0 +1,68 @@
+{
+  "name": "x-signal",
+  "version": "0.1.0-rc.5",
+  "private": true,
+  "description": "Local X (Twitter) research MCP server for ChatGPT and Codex",
+  "homepage": "https://github.com/anotb/x-signal#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anotb/x-signal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anotb/x-signal/issues"
+  },
+  "keywords": [
+    "x",
+    "twitter",
+    "mcp",
+    "chatgpt",
+    "codex",
+    "research",
+    "docker",
+    "playwright"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --watch --experimental-strip-types src/app.ts",
+    "start": "node dist/src/app.js",
+    "stdio": "node dist/src/stdio.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:contract": "vitest run tests/contract",
+    "test:fixtures": "vitest run tests/parsers",
+    "test:docker": "node scripts/docker-smoke.mjs",
+    "test:live": "node scripts/live-canary.mjs",
+    "test:privacy": "node scripts/privacy-check.mjs",
+    "validate": "npm run build && npm test && npm run test:privacy",
+    "inspector": "npx @modelcontextprotocol/inspector http://127.0.0.1:7345/mcp",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
+    "tunnel:secure:configure": "node scripts/configure-secure-tunnel.mjs",
+    "tunnel:secure:check": "node scripts/configure-secure-tunnel.mjs --check",
+    "tunnel:proxy": "node scripts/tunnel-proxy.mjs",
+    "tunnel:chatgpt": "node scripts/chatgpt-tunnel.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "cors": "2.8.5",
+    "express": "5.1.0",
+    "playwright-core": "1.62.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.3",
+    "@types/node": "24.10.1",
+    "@modelcontextprotocol/inspector": "2.1.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  },
+  "overrides": {
+    "ws": "8.21.3"
+  },
+  "license": "MIT"
+}

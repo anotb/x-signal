@@ -1,0 +1,24 @@
+# Troubleshooting
+
+| Symptom | Meaning | Resolution |
+| --- | --- | --- |
+| `NOT_AUTHENTICATED` | Docker Chromium has no valid X identity | Keep host Chrome signed in and let the companion sync, or sign in once through noVNC. |
+| Companion says `Inactive` | Another Chrome profile is the selected session source | Click **Use this profile** only when you intend to switch X Signal. Current research must finish or be cancelled first. |
+| Main Chrome is temporarily on an alternate X account | Automatic sync would later follow the main profile back to its usual account | Activate once, verify the alternate handle, then turn off **Keep this profile synced automatically**. For lasting freshness, move the alternate X login to its own Chrome profile and activate that source. |
+| A one-time copied login becomes signed out after switching the original Chrome profile back | X invalidated or rotated the copied session during the same-profile account change | Use a dedicated Chrome profile for the alternate account, install the companion there, leave automatic sync on, and click **Use this profile** once. This requires no recurring cookie copy. |
+| Dedicated source looks stale | That Chrome profile has not run recently or its X login needs attention | Open the dedicated profile once and inspect the extension popup. It retries at startup, every five minutes while the profile runs, and after X cookie changes; `x_status` shows `lastSyncedAt` and `lastAppliedAt`. |
+| Session update says it is queued behind research | The selected profile changed X cookies while an account-bound run was active | No action is needed. The extension retries automatically after the run settles so one run never mixes two accounts. |
+| I want X Signal to use a different alternate account | Either another dedicated Chrome profile should become the source, or the selected dedicated profile is changing accounts | For another profile, sign in there, install the companion, and click **Use this profile** once. Within the selected profile, sign into the replacement X account; cookie-change sync updates Docker automatically after active research settles. |
+| `REAUTH_REQUIRED` / challenge | X requires visible account action | Open noVNC and complete the visible flow. X Signal does not bypass it. |
+| `RATE_LIMITED` | X returned 429 or a persisted cooldown is active | Keep the same `runId`, wait until `retryAt`, and poll with `x_get_run`. Do not start a replacement search; queued legs recover with a single probe and escalating cooldown if pressure continues. |
+| `UPSTREAM_CHANGED` | A captured operation or parser shape changed | Run a live canary, inspect current operation names/shapes, patch the parser, and refresh the ChatGPT app. |
+| `/readyz` is 503 | Browser debugger is not reachable | Check `docker compose ps` and `docker compose logs browser`. |
+| noVNC password prompt | noVNC authentication is working | Copy `/data/.vnc/password.txt` from the browser container as shown in README. |
+| ChatGPT shows stale action schemas | The development registration cached an older MCP contract | Rebuild the app container, then choose **Refresh** in the X Signal plugin settings. |
+| ChatGPT says the X Signal app is unreachable after using the temporary fallback | The disposable `cloudflared` URL expired when its terminal or process stopped | Configure the `chatgpt` Secure MCP Tunnel profile, then create the app once against that stable tunnel. |
+| ChatGPT lists no available tunnels | The tunnel is not associated with this ChatGPT workspace, the app creator lacks **Tunnels Read + Use**, or a new role has not propagated | Check the tunnel's workspace association in Platform, verify the user role, keep `openai-tunnel` healthy, and reload the app form. |
+| `openai-tunnel` is unhealthy | Its ID/key is missing or rejected, it cannot reach OpenAI, or it cannot reach X Signal | Run `npm run tunnel:secure:check`, inspect redacted `docker compose logs openai-tunnel`, verify ports 7345/7346 locally, and recreate only that service after fixing configuration. |
+| An exact list or community is empty | The supplied X ID is wrong, inaccessible to this account, or currently has no visible posts | Verify the ID in the signed-in browser and retry the same source; X Signal never substitutes another feed. |
+| Notifications are not offered by `x_get_timeline` | Current X notifications are typed notification records, not a post timeline | This source is intentionally absent from the public schema until it has a truthful typed contract. |
+| A job remains `running` after app loss | Its leg lease was interrupted | Restart the app; interrupted leases return to the queue and polling never redispatches work. |
+| A response returns fewer posts than `totalPosts` | The run has more durable evidence than fits the chosen response page | Pass `evidencePage.nextCursor` to `x_get_evidence`; this is a SQLite-only read and does not touch X. |
