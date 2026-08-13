@@ -5,6 +5,7 @@ import readline from "node:readline/promises";
 import { pathToFileURL } from "node:url";
 
 const tunnelKey = "OPENAI_TUNNEL_ID";
+const organizationKey = "OPENAI_ORGANIZATION_ID";
 const secretRelativePath = path.join(".secrets", "openai-tunnel-api-key");
 
 export function validateTunnelId(value) {
@@ -19,6 +20,14 @@ export function validateApiKey(value) {
   const normalized = value.trim();
   if (!/^sk-[A-Za-z0-9_.-]{20,}$/.test(normalized)) {
     throw new Error("Runtime API key does not look like an OpenAI project key.");
+  }
+  return normalized;
+}
+
+export function validateOrganizationId(value) {
+  const normalized = value.trim();
+  if (!/^org-[A-Za-z0-9_-]{8,}$/.test(normalized)) {
+    throw new Error("Organization ID must start with org- and contain only letters, numbers, underscores, or hyphens.");
   }
   return normalized;
 }
@@ -52,24 +61,38 @@ function upsertEnv(file, key, value) {
   writeAtomic(file, `${lines.join("\n")}\n`);
 }
 
-export function configureSecureTunnel({ root = process.cwd(), tunnelId, apiKey } = {}) {
+export function configureSecureTunnel({ root = process.cwd(), tunnelId, organizationId, apiKey } = {}) {
   const envFile = path.join(root, ".env");
   const secretFile = path.join(root, secretRelativePath);
   const existingTunnelId = readEnvValue(envFile, tunnelKey);
+  const existingOrganizationId = readEnvValue(envFile, organizationKey);
   const resolvedTunnelId = tunnelId ? validateTunnelId(tunnelId) : existingTunnelId ? validateTunnelId(existingTunnelId) : undefined;
-  if (!resolvedTunnelId && apiKey === undefined) throw new Error("Tunnel ID is missing.");
+  const resolvedOrganizationId = organizationId
+    ? validateOrganizationId(organizationId)
+    : existingOrganizationId
+      ? validateOrganizationId(existingOrganizationId)
+      : undefined;
+  if (!resolvedTunnelId && !resolvedOrganizationId && apiKey === undefined) throw new Error("Tunnel and organization IDs are missing.");
   if (resolvedTunnelId) upsertEnv(envFile, tunnelKey, resolvedTunnelId);
+  if (resolvedOrganizationId) upsertEnv(envFile, organizationKey, resolvedOrganizationId);
   if (apiKey !== undefined) writeAtomic(secretFile, `${validateApiKey(apiKey)}\n`);
-  return { envFile, secretFile, hasApiKey: fs.existsSync(secretFile), tunnelIdConfigured: Boolean(resolvedTunnelId) };
+  return {
+    envFile,
+    secretFile,
+    hasApiKey: fs.existsSync(secretFile),
+    tunnelIdConfigured: Boolean(resolvedTunnelId),
+    organizationIdConfigured: Boolean(resolvedOrganizationId),
+  };
 }
 
 export function inspectSecureTunnel({ root = process.cwd() } = {}) {
   const envFile = path.join(root, ".env");
   const secretFile = path.join(root, secretRelativePath);
   validateTunnelId(readEnvValue(envFile, tunnelKey) ?? "");
+  validateOrganizationId(readEnvValue(envFile, organizationKey) ?? "");
   if (!fs.existsSync(secretFile)) throw new Error("Runtime key file is missing. Run npm run tunnel:secure:configure.");
   validateApiKey(fs.readFileSync(secretFile, "utf8"));
-  return { status: "ok", tunnelIdConfigured: true, apiKeyConfigured: true };
+  return { status: "ok", tunnelIdConfigured: true, organizationIdConfigured: true, apiKeyConfigured: true };
 }
 
 async function readAllStdin() {
@@ -133,9 +156,10 @@ async function interactiveConfigure() {
   }
   const prompt = readline.createInterface({ input: process.stdin, output: process.stdout });
   const tunnelId = await prompt.question("Secure MCP tunnel ID: ");
+  const organizationId = await prompt.question("Owning OpenAI organization ID: ");
   prompt.close();
   const apiKey = await readHidden("Runtime API key (hidden): ");
-  configureSecureTunnel({ tunnelId, apiKey });
+  configureSecureTunnel({ tunnelId, organizationId, apiKey });
 }
 
 async function main() {
@@ -146,6 +170,8 @@ async function main() {
   }
   if (args.has("--tunnel-id-from-stdin")) {
     configureSecureTunnel({ tunnelId: await readAllStdin() });
+  } else if (args.has("--organization-id-from-stdin")) {
+    configureSecureTunnel({ organizationId: await readAllStdin() });
   } else if (args.has("--api-key-from-stdin")) {
     configureSecureTunnel({ apiKey: await readAllStdin() });
   } else {

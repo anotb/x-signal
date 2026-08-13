@@ -64,7 +64,7 @@ npm run tunnel:secure:configure
 docker compose --profile chatgpt up -d --build --wait
 ```
 
-The first command accepts the tunnel ID and key through a hidden prompt. It writes the ID to ignored `.env` and the key to ignored `.secrets/openai-tunnel-api-key`; neither value belongs in a plugin file, issue, screenshot, or commit. The second command starts the pinned multi-architecture `tunnel-client` beside X Signal and waits for a successful control-plane poll.
+The first command accepts the tunnel ID, its owning Platform organization ID, and the runtime key through a hidden prompt. It writes both IDs to ignored `.env` and the key to ignored `.secrets/openai-tunnel-api-key`; none of these values belongs in a plugin file, issue, screenshot, or commit. The organization ID removes ambiguity for accounts that belong to multiple Platform organizations. The second command starts the pinned multi-architecture `tunnel-client` beside X Signal and waits for a successful control-plane poll.
 
 Check it without exposing either credential:
 

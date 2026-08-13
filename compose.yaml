@@ -66,6 +66,7 @@ services:
         condition: service_healthy
     environment:
       CONTROL_PLANE_TUNNEL_ID: "${OPENAI_TUNNEL_ID:-not-configured}"
+      CONTROL_PLANE_ORGANIZATION_ID: "${OPENAI_ORGANIZATION_ID:-not-configured}"
       MCP_SERVER_URL: "http://x-signal:7345/mcp"
       HEALTH_LISTEN_ADDR: ":8080"
       # Docker bridge requests are not loopback inside the container. The host

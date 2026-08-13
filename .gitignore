@@ -13,6 +13,7 @@ backups/
 screenshots/
 evidence/private/
 .codex/pro-reviews/
+.codex-remote-attachments/
 *.log
 *.sqlite
 *.sqlite-shm
