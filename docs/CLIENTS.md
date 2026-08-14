@@ -53,6 +53,8 @@ Configure that client to spawn `npm run stdio` with its working directory set to
 
 ChatGPT web cannot connect to localhost directly. The included Secure MCP Tunnel profile is the normal private connection for a personal installation.
 
+Developer-mode custom MCP apps are currently supported on ChatGPT web only, not in the native ChatGPT mobile apps. Use ChatGPT web to configure and run X Signal. A native mobile app may report an active-organization-required tunnel error before it dispatches any request to the tunnel; reconnecting the app, rotating the runtime key, or rebuilding X Signal will not resolve that platform limitation. See OpenAI's [developer mode and custom MCP app availability](https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta).
+
 ### Configure the stable tunnel
 
 1. Open [Platform tunnel settings](https://platform.openai.com/settings/organization/tunnels). Create a tunnel, include the Platform organization that owns it, and associate the exact ChatGPT workspace where you will create the app.
