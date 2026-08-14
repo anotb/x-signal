@@ -16,6 +16,15 @@ function temporaryRoot() {
   return root;
 }
 
+function composeService(source: string, name: string) {
+  const marker = `  ${name}:\n`;
+  const start = source.indexOf(marker);
+  if (start < 0) throw new Error(`Compose service ${name} was not found.`);
+  const remainder = source.slice(start + marker.length);
+  const boundaries = [remainder.search(/\n  [a-zA-Z0-9_-]+:\n/), remainder.search(/\n[a-zA-Z0-9_-]+:\n/)].filter((index) => index >= 0);
+  return remainder.slice(0, boundaries.length ? Math.min(...boundaries) : undefined);
+}
+
 describe("Secure MCP Tunnel local configuration", () => {
   it("mounts the runtime key at the exact file path used by the pinned client", () => {
     const compose = fs.readFileSync(path.resolve("compose.yaml"), "utf8");
@@ -26,6 +35,14 @@ describe("Secure MCP Tunnel local configuration", () => {
     expect(compose).toContain('ALLOW_REMOTE_UI: "true"');
     expect(compose).toContain('"127.0.0.1:7346:8080"');
     expect(compose).toContain("--require-control-plane-poll");
+    const browser = composeService(compose, "browser");
+    const xSignal = composeService(compose, "x-signal");
+    const tunnel = composeService(compose, "openai-tunnel");
+    expect(browser).toContain("interval: 30s\n      start_interval: 2s\n      timeout: 3s\n      retries: 5\n      start_period: 60s");
+    expect(xSignal).toContain("interval: 30s\n      start_interval: 2s\n      timeout: 3s\n      retries: 5\n      start_period: 60s");
+    expect(tunnel).toContain('entrypoint: ["/bin/sh", "-ec", "until wget -q -O /dev/null http://x-signal:7345/healthz; do sleep 1; done; exec /usr/bin/tunnel-client run \\"$$@\\"", "--"]');
+    expect(tunnel).toContain('command: ["--control-plane.api-key=file:/run/secrets/openai-tunnel-api-key"]');
+    expect(tunnel).toContain("interval: 30s\n      start_interval: 2s\n      timeout: 5s\n      retries: 6\n      start_period: 120s");
     for (const script of ["scripts/backup.mjs", "scripts/restore.mjs"]) {
       const source = fs.readFileSync(path.resolve(script), "utf8");
       expect(source).toContain('"--profile", "chatgpt"');

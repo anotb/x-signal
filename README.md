@@ -25,7 +25,7 @@ The model chooses how broadly to search and uses direct references when they hel
 
 You need:
 
-- Docker with Compose. Docker Desktop is the usual choice on Windows and macOS; use Linux containers on Windows.
+- Docker Engine 25.0 or newer with Docker Compose 2.20.2 or newer. Docker Desktop is the usual choice on Windows and macOS; use Linux containers on Windows.
 - An X account.
 - Chrome only if you want automatic session sync from a dedicated Chrome profile.
 - Node.js 24.19 or newer only for ChatGPT tunnel setup, tests, MCP Inspector, backup/restore, or stdio.

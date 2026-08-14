@@ -19,10 +19,11 @@ services:
     shm_size: "1gb"
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:9222/json/version >/dev/null && curl --fail --silent http://127.0.0.1:6080/vnc.html >/dev/null"]
-      interval: 5s
+      interval: 30s
+      start_interval: 2s
       timeout: 3s
-      retries: 30
-      start_period: 15s
+      retries: 5
+      start_period: 60s
     networks: [xsignal]
 
   x-signal:
@@ -51,10 +52,11 @@ services:
       - xsignal_data:/data
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7345/healthz').then(r=>{if(!r.ok)process.exit(1)})"]
-      interval: 5s
+      interval: 30s
+      start_interval: 2s
       timeout: 3s
-      retries: 30
-      start_period: 10s
+      retries: 5
+      start_period: 60s
     networks: [xsignal]
 
   openai-tunnel:
@@ -64,6 +66,9 @@ services:
     depends_on:
       x-signal:
         condition: service_healthy
+    # Docker daemon restarts do not replay Compose dependency ordering. Gate the
+    # tunnel process itself so its one-time MCP/OAuth probe cannot race X Signal.
+    entrypoint: ["/bin/sh", "-ec", "until wget -q -O /dev/null http://x-signal:7345/healthz; do sleep 1; done; exec /usr/bin/tunnel-client run \"$$@\"", "--"]
     environment:
       CONTROL_PLANE_TUNNEL_ID: "${OPENAI_TUNNEL_ID:-not-configured}"
       CONTROL_PLANE_ORGANIZATION_ID: "${OPENAI_ORGANIZATION_ID:-not-configured}"
@@ -82,10 +87,11 @@ services:
       - "127.0.0.1:7346:8080"
     healthcheck:
       test: ["CMD", "/usr/bin/tunnel-client", "health", "--port", "8080", "--require-control-plane-poll"]
-      interval: 10s
+      interval: 30s
+      start_interval: 2s
       timeout: 5s
-      retries: 18
-      start_period: 20s
+      retries: 6
+      start_period: 120s
     networks: [xsignal]
 
 networks:
